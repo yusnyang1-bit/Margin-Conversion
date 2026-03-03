@@ -2,116 +2,98 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>Margin Conversion v1.7.0</title>
+    <title>Margin Conversion v1.8.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
-<body class="bg-gray-50 min-h-screen">
+<body class="bg-gray-100 min-h-screen">
 
-    <nav class="bg-slate-900 text-white p-4 sticky top-0 z-50 shadow-2xl">
-        <div class="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
-            <div class="flex items-center">
-                <div class="bg-indigo-600 p-2 rounded-lg mr-3">
-                    <i class="fas fa-robot text-white text-xl"></i>
-                </div>
+    <nav class="bg-slate-900 text-white p-4 shadow-xl">
+        <div class="max-w-6xl mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="bg-indigo-500 p-2 rounded-lg"><i class="fas fa-chart-line"></i></div>
                 <div>
-                    <h1 class="text-lg font-black tracking-tighter italic">AUTO MARGIN</h1>
-                    <span id="ver-info" class="text-[9px] bg-slate-700 px-2 py-0.5 rounded text-slate-300">v1.7.0 Auto-Sync</span>
+                    <h1 class="font-black italic text-lg tracking-tighter">MARGIN CONVERSION</h1>
+                    <span id="ver" class="text-[9px] bg-slate-700 px-2 py-0.5 rounded text-indigo-300 tracking-widest uppercase">Connecting...</span>
                 </div>
             </div>
-            
-            <div class="flex gap-4 font-mono text-xs">
-                <div class="bg-slate-800 px-4 py-2 rounded-xl border border-slate-700">
-                    USD: <span id="usd-rate" class="text-green-400">--</span>
-                </div>
-                <div class="bg-slate-800 px-4 py-2 rounded-xl border border-slate-700">
-                    JPY: <span id="jpy-rate" class="text-green-400">--</span>
-                </div>
+            <div class="font-mono text-xs flex gap-4">
+                <div class="bg-slate-800 px-3 py-1.5 rounded-lg">USD: <span id="r-u" class="text-green-400">--</span></div>
+                <div class="bg-slate-800 px-3 py-1.5 rounded-lg">JPY: <span id="r-j" class="text-green-400">--</span></div>
             </div>
         </div>
     </nav>
 
-    <main class="max-w-6xl mx-auto p-4 md:p-8">
-        <div class="flex gap-4 mb-8">
+    <main class="max-w-5xl mx-auto p-4 md:p-8">
+        <div class="flex gap-3 mb-6">
             <div class="relative flex-grow">
                 <i class="fas fa-search absolute left-4 top-4 text-slate-400"></i>
-                <input type="text" id="searchInput" placeholder="輸入商品代碼或名稱 (如: NQ, MNQ)..." 
-                    class="w-full pl-12 pr-4 py-4 rounded-2xl border-0 shadow-inner ring-1 ring-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none transition">
+                <input type="text" id="searchInput" placeholder="搜尋商品 (如: NQ, MNQ)..." 
+                    class="w-full pl-12 pr-4 py-4 rounded-2xl border-0 shadow-sm outline-none focus:ring-2 focus:ring-indigo-500">
             </div>
-            <button onclick="fetchData()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-10 rounded-2xl font-bold shadow-lg flex items-center">
-                <i class="fas fa-sync-alt mr-2" id="sync-icon"></i> 同步最新
+            <button onclick="fetchData()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-8 rounded-2xl font-bold shadow-lg transition flex items-center">
+                <i class="fas fa-sync-alt mr-2" id="sync-icon"></i> 同步
             </button>
         </div>
 
-        <div class="bg-white rounded-[2rem] shadow-xl border border-slate-100 overflow-hidden">
-            <div class="overflow-x-auto">
-                <table class="w-full text-left">
-                    <thead class="bg-slate-50/50 border-b border-slate-100 text-slate-400 text-[11px] font-bold uppercase tracking-widest">
-                        <tr>
-                            <th class="p-6">交易所商品</th>
-                            <th class="p-6 text-right">大點價值</th>
-                            <th class="p-6 text-right">原始保證金</th>
-                            <th class="p-6 text-right bg-indigo-50/50 text-indigo-600">台幣估算</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tableBody" class="divide-y divide-slate-50">
-                        <tr><td colspan="4" class="p-20 text-center text-slate-300 italic">等待同步數據...</td></tr>
-                    </tbody>
-                </table>
-            </div>
+        <div class="bg-white rounded-[2rem] shadow-2xl overflow-hidden border border-slate-200">
+            <table class="w-full text-left">
+                <thead class="bg-slate-50 border-b border-slate-100 text-slate-400 text-[10px] uppercase font-bold tracking-widest">
+                    <tr>
+                        <th class="p-6">商品名稱 (代碼)</th>
+                        <th class="p-6 text-right">原始保證金</th>
+                        <th class="p-6 text-right bg-indigo-50 text-indigo-600">台幣估計</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody" class="divide-y divide-slate-50">
+                    <tr><td colspan="3" class="p-20 text-center text-slate-300 italic">請點擊同步按鈕獲取資料</td></tr>
+                </tbody>
+            </table>
         </div>
-        
-        <p id="status-bar" class="text-center text-[10px] text-slate-400 mt-8 font-mono uppercase tracking-widest"></p>
+        <div id="status" class="mt-6 text-center text-[10px] text-slate-400 font-mono tracking-widest uppercase"></div>
     </main>
 
     <script>
-        // 1. 填入你的 GAS URL
-        const GAS_URL = "https://script.google.com/macros/s/AKfycby09XQpvaaL53sA9KsG0DXWB9CaqzIJ2tT-4rN1UbUFNbsHEmpae1U1yivYmq-Mmv5iUg/exec";
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbzMsCMtKN-qd05w_nA05yTJnUwIItzJVbonSw-5WhT4suEDE5H67IQ2DjkI0Nkk3OJq3Q/exec";
 
-        let localState = { margins: [], rates: {} };
+        let local = { margins: [], rates: {} };
 
         async function fetchData() {
             const icon = document.getElementById('sync-icon');
             icon.classList.add('fa-spin');
-            
             try {
-                const response = await fetch(GAS_URL);
-                const data = await response.json();
+                const res = await fetch(GAS_URL);
+                const data = await res.json();
+                
+                local.margins = data.margins;
+                local.rates = data.rates;
 
-                localState.margins = data.margins;
-                localState.rates = data.rates;
-
-                // 更新頂部資訊
-                document.getElementById('usd-rate').innerText = data.rates.USD;
-                document.getElementById('jpy-rate').innerText = data.rates.JPY;
-                document.getElementById('status-bar').innerText = "Last Sync: " + (data.lastUpdate || "Success");
-                document.getElementById('ver-info').innerText = data.version || "v1.7.0";
+                document.getElementById('r-u').innerText = data.rates.USD;
+                document.getElementById('r-j').innerText = data.rates.JPY;
+                document.getElementById('ver').innerText = data.version;
+                document.getElementById('status').innerText = "Last Update: " + data.lastUpdate;
 
                 render();
             } catch (e) {
-                alert("自動抓取連線失敗！請確保 GAS 部署為『所有人』。");
-                console.error(e);
+                alert("抓取失敗，請確認 GAS 權限設為『所有人』。");
             } finally {
                 icon.classList.remove('fa-spin');
             }
         }
 
         function render() {
-            const query = document.getElementById('searchInput').value.toLowerCase();
+            const q = document.getElementById('searchInput').value.toLowerCase();
             const tbody = document.getElementById('tableBody');
-            
-            const filtered = localState.margins.filter(i => (i.name + i.id).toLowerCase().includes(query));
+            const filtered = local.margins.filter(i => (i.name + i.id).toLowerCase().includes(q));
 
             tbody.innerHTML = filtered.map(item => {
-                const rate = localState.rates[item.cur] || 1;
-                const twd = Math.round(item.margin * rate);
+                const twd = Math.round(item.margin * (local.rates[item.cur] || 1));
                 return `
-                    <tr class="hover:bg-indigo-50/30 transition-colors cursor-default">
+                    <tr class="hover:bg-indigo-50/30 transition-colors">
                         <td class="p-6">
                             <div class="font-bold text-slate-800">${item.name}</div>
                             <div class="text-[10px] text-slate-400 font-mono">${item.id}</div>
                         </td>
-                        <td class="p-6 text-right font-mono text-slate-500 text-sm italic">${item.pointVal}</td>
                         <td class="p-6 text-right font-mono font-bold text-slate-700">
                             <span class="text-[9px] text-slate-300 mr-1">${item.cur}</span>${item.margin.toLocaleString()}
                         </td>
@@ -124,7 +106,6 @@
         }
 
         document.getElementById('searchInput').addEventListener('input', render);
-        window.onload = fetchData;
     </script>
 </body>
 </html>
