@@ -64,22 +64,25 @@ async function fetchData() {
     icon.classList.add('fa-spin');
     
     try {
-        console.log("正在請求數據自: ", GAS_API_URL); // 新增這行
         const response = await fetch(GAS_API_URL);
-        
-        if (!response.ok) throw new Error('網路回應不正常');
-        
         const data = await response.json();
-        console.log("收到的數據: ", data); // 新增這行
         
+        if (data.error) {
+            console.error("GAS 後端錯誤:", data.error);
+            alert("後端抓取發生問題，請檢查 GAS 程式碼。");
+            return;
+        }
+
+        // 注意：這裡要對應 GAS 回傳的 key (margins, rates)
         localState.margins = data.margins;
         localState.rates = data.rates;
         
+        console.log("成功同步數據:", data);
         renderRates();
         renderTable();
     } catch (e) {
-        console.error("抓取失敗詳細原因:", e); // 修改這行
-        alert("抓取失敗！請確保 GAS 部署設定為『所有人』，或按 F12 查看控制台錯誤訊息。");
+        console.error("前端抓取失敗:", e);
+        alert("無法連線至 GAS API，請確認部署設定為『所有人』。");
     } finally {
         icon.classList.remove('fa-spin');
     }
