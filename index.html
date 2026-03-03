@@ -2,108 +2,97 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Margin Conversion v1.5.8</title>
+    <title>Margin Conversion v1.5.9</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
-<body class="bg-gray-50">
+<body class="bg-slate-50 min-h-screen">
 
-    <nav class="bg-slate-900 text-white p-4 sticky top-0 z-50 shadow-xl">
-        <div class="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
-            <h1 class="text-xl font-black italic tracking-widest text-indigo-400">MARGIN CONVERSION</h1>
-            <div id="rate-bar" class="flex gap-4 text-xs font-mono bg-slate-800 px-4 py-2 rounded-xl border border-slate-700">
-                USD: <span id="usd-val" class="text-green-400">--</span> | 
-                JPY: <span id="jpy-val" class="text-green-400">--</span> | 
-                HKD: <span id="hkd-val" class="text-green-400">--</span>
+    <nav class="bg-indigo-950 text-white p-4 shadow-2xl">
+        <div class="max-w-6xl mx-auto flex justify-between items-center">
+            <h1 class="font-black italic tracking-tighter text-xl text-cyan-400">MARGIN CONVERSION</h1>
+            <div id="rate-display" class="font-mono text-xs bg-indigo-900 px-4 py-2 rounded-lg border border-indigo-800">
+                USD: <span id="u-r">--</span> | JPY: <span id="j-r">--</span>
             </div>
         </div>
     </nav>
 
-    <main class="max-w-6xl mx-auto p-4 md:p-6">
-        <div class="flex flex-col md:flex-row gap-4 mb-6">
-            <input type="text" id="searchInput" placeholder="搜尋商品 (如: NQ, MNQ, 小道瓊)..." 
-                class="flex-grow pl-6 pr-4 py-3.5 rounded-2xl border-0 shadow-sm ring-1 ring-slate-200 outline-none focus:ring-2 focus:ring-indigo-500">
-            <button onclick="fetchData()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-2xl font-bold transition flex items-center justify-center shadow-lg">
-                <i class="fas fa-sync-alt mr-2" id="sync-icon"></i> 同步數據
+    <main class="max-w-6xl mx-auto p-6">
+        <div class="flex gap-4 mb-8">
+            <input type="text" id="searchInput" placeholder="搜尋商品名稱或代碼 (如: NQ, MNQ)..." 
+                class="flex-grow p-4 rounded-2xl shadow-inner border-0 ring-1 ring-slate-200 outline-none focus:ring-2 focus:ring-indigo-500">
+            <button onclick="fetchData()" class="bg-indigo-600 text-white px-10 rounded-2xl font-bold shadow-lg hover:bg-indigo-700 transition">
+                <i class="fas fa-sync-alt mr-2" id="sync-icon"></i> 同步
             </button>
         </div>
 
-        <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-            <div class="overflow-x-auto">
-                <table class="w-full text-left">
-                    <thead class="bg-slate-50 border-b border-slate-200 text-slate-400 text-[11px] uppercase">
-                        <tr>
-                            <th class="p-5">商品名稱 (代碼)</th>
-                            <th class="p-5 text-right">一大點價值</th>
-                            <th class="p-5 text-right">原始保證金</th>
-                            <th class="p-5 text-right bg-indigo-50 text-indigo-600">台幣換算 (約)</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tableBody">
-                        <tr><td colspan="4" class="p-20 text-center text-slate-400">資料讀取中，請稍候...</td></tr>
-                    </tbody>
-                </table>
-            </div>
+        <div class="bg-white rounded-3xl shadow-xl overflow-hidden border border-slate-200">
+            <table class="w-full text-left">
+                <thead class="bg-slate-50 text-slate-400 text-[10px] font-bold uppercase">
+                    <tr>
+                        <th class="p-5">商品名稱</th>
+                        <th class="p-5 text-right">大點價值</th>
+                        <th class="p-5 text-right">原始保證金</th>
+                        <th class="p-5 text-right bg-indigo-50 text-indigo-600">台幣估計</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody" class="divide-y divide-slate-100">
+                    <tr><td colspan="4" class="p-20 text-center text-slate-300">按下同步按鈕開始抓取資料...</td></tr>
+                </tbody>
+            </table>
         </div>
-        <div id="debug-info" class="mt-4 text-center text-[10px] text-slate-400"></div>
     </main>
 
     <script>
-        const GAS_API_URL = "https://script.google.com/macros/s/AKfycbx9pMLqHVkdcSrWmEcAVF2BYP84x4C_sQY2G-vmUf9ngO3dUG8X7HzG8hxX4ZwCwVLcdw/exec";
+        // 請更新此處 URL
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbyHNJ9usu1A8BWhYjqnP00kYHKkuBOSO2yHsCZCRmbYu-BlxH-zPSQZO0xackmeYtlwAg/exec";
 
-        let localState = { margins: [], rates: {} };
+        let localData = { margins: [], rates: { USD: 32.55, JPY: 0.21, HKD: 4.15 } };
 
         async function fetchData() {
             const icon = document.getElementById('sync-icon');
             icon.classList.add('fa-spin');
             
             try {
-                const response = await fetch(GAS_API_URL);
-                const data = await response.json();
-                console.log("收到的資料:", data); // 可以在瀏覽器 F12 看到
-
-                if (data.rates) {
-                    document.getElementById('usd-val').innerText = data.rates.USD;
-                    document.getElementById('jpy-val').innerText = data.rates.JPY;
-                    document.getElementById('hkd-val').innerText = data.rates.HKD;
-                }
+                const res = await fetch(GAS_URL);
+                const data = await res.json();
+                
+                // 更新匯率顯示
+                document.getElementById('u-r').innerText = data.rates.USD;
+                document.getElementById('j-r').innerText = data.rates.JPY;
 
                 if (data.margins && data.margins.length > 0) {
-                    localState.margins = data.margins;
-                    localState.rates = data.rates;
-                    renderTable();
+                    localData.margins = data.margins;
+                    localData.rates = data.rates;
+                    render();
                 } else {
-                    document.getElementById('tableBody').innerHTML = `<tr><td colspan="4" class="p-20 text-center text-slate-400">同步成功，但元大官網目前沒有資料傳回。</td></tr>`;
+                    alert("連線成功但抓不到元大數據，請檢查官網。");
                 }
-                
-                document.getElementById('debug-info').innerText = "最後更新: " + (data.lastUpdate || "未知");
             } catch (e) {
-                console.error("連線錯誤:", e);
-                document.getElementById('tableBody').innerHTML = `<tr><td colspan="4" class="p-20 text-center text-red-400">無法連線至 API，請確認 GAS 是否部署為『所有人』。</td></tr>`;
+                alert("連線失敗！可能是 GAS 權限未設為『所有人』。");
+                console.error(e);
             } finally {
                 icon.classList.remove('fa-spin');
             }
         }
 
-        function renderTable() {
+        function render() {
             const query = document.getElementById('searchInput').value.toLowerCase();
             const tbody = document.getElementById('tableBody');
             
-            const filtered = localState.margins.filter(i => (i.name + i.id).toLowerCase().includes(query));
+            const filtered = localData.margins.filter(i => (i.name + i.id).toLowerCase().includes(query));
 
             tbody.innerHTML = filtered.map(item => {
-                const rate = localState.rates[item.cur] || 1;
-                const twd = Math.round(item.margin * rate);
+                const twd = Math.round(item.margin * (localData.rates[item.cur] || 1));
                 return `
                     <tr class="hover:bg-slate-50 transition">
                         <td class="p-5">
                             <div class="font-bold text-slate-800">${item.name}</div>
-                            <div class="text-[10px] text-slate-400 font-mono uppercase">${item.id}</div>
+                            <div class="text-[10px] text-slate-400 font-mono">${item.id}</div>
                         </td>
-                        <td class="p-5 text-right font-mono text-slate-500 text-sm">${item.pointVal}</td>
+                        <td class="p-5 text-right font-mono text-slate-400 text-sm">${item.pointVal}</td>
                         <td class="p-5 text-right font-mono font-bold text-slate-700">
-                            <span class="text-[9px] text-slate-400 mr-1">${item.cur}</span>${item.margin.toLocaleString()}
+                            <span class="text-[9px] text-slate-300 mr-1">${item.cur}</span>${item.margin.toLocaleString()}
                         </td>
                         <td class="p-5 text-right font-black text-indigo-700 bg-indigo-50/30 text-lg">
                             NT$ ${twd.toLocaleString()}
@@ -113,8 +102,7 @@
             }).join('');
         }
 
-        document.getElementById('searchInput').addEventListener('input', renderTable);
-        window.onload = fetchData;
+        document.getElementById('searchInput').addEventListener('input', render);
     </script>
 </body>
 </html>
