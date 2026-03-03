@@ -2,107 +2,84 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>Margin Conversion v1.9.0</title>
+    <title>Margin v2.0.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
-<body class="bg-slate-900 min-h-screen text-slate-200">
+<body class="bg-[#0f172a] text-slate-300 min-h-screen">
 
-    <nav class="p-6 border-b border-slate-800 bg-slate-900/50 backdrop-blur-md sticky top-0 z-50">
-        <div class="max-w-6xl mx-auto flex justify-between items-center">
-            <div class="flex items-center gap-4">
-                <div class="w-10 h-10 bg-indigo-500 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20">
-                    <i class="fas fa-bolt text-white"></i>
-                </div>
-                <div>
-                    <h1 class="text-xl font-black tracking-tighter italic text-white">MARGIN <span class="text-indigo-400">v1.9.0</span></h1>
-                    <p id="status-text" class="text-[10px] text-slate-500 font-mono uppercase tracking-tighter">Engine Standby</p>
-                </div>
-            </div>
-            <div id="rates" class="flex gap-4 font-mono text-sm bg-slate-800/50 p-2 rounded-lg border border-slate-700">
-                <span class="text-slate-400">USD <b id="r-usd" class="text-emerald-400">--</b></span>
-                <span class="text-slate-400">JPY <b id="r-jpy" class="text-emerald-400">--</b></span>
-            </div>
+    <nav class="p-6 border-b border-slate-800 flex justify-between items-center bg-[#0f172a]/80 backdrop-blur sticky top-0 z-50">
+        <div class="flex items-center gap-3">
+            <div class="p-2 bg-blue-600 rounded-lg shadow-lg shadow-blue-500/20"><i class="fas fa-microchip text-white"></i></div>
+            <h1 class="text-xl font-black italic tracking-tighter text-white">SYSTEM <span class="text-blue-500">v2.0.0</span></h1>
+        </div>
+        <div class="flex gap-4 font-mono text-xs text-emerald-400 bg-slate-800/50 px-4 py-2 rounded-full border border-slate-700">
+            USD: <span id="r-usd">--</span> | JPY: <span id="r-jpy">--</span>
         </div>
     </nav>
 
-    <main class="max-w-6xl mx-auto p-6">
+    <main class="max-w-4xl mx-auto p-6">
         <div class="flex gap-4 mb-8">
-            <input type="text" id="search" placeholder="搜尋商品 (NQ, MNQ, 銅...)" 
-                class="flex-grow bg-slate-800 border-0 ring-1 ring-slate-700 rounded-2xl px-6 py-4 focus:ring-2 focus:ring-indigo-500 transition-all outline-none">
-            <button onclick="fetchData()" class="bg-indigo-600 hover:bg-indigo-500 px-8 rounded-2xl font-bold flex items-center gap-2 transition-all shadow-lg shadow-indigo-600/20">
-                <i id="sync-icon" class="fas fa-sync-alt"></i> 同步
+            <input type="text" id="search" placeholder="搜尋代碼 (如: NQ, MNQ)..." 
+                class="flex-grow bg-slate-800/50 border border-slate-700 rounded-2xl px-6 py-4 focus:ring-2 focus:ring-blue-500 outline-none">
+            <button onclick="sync()" class="bg-blue-600 hover:bg-blue-500 px-10 rounded-2xl font-bold flex items-center gap-2 transition-all">
+                <i id="s-icon" class="fas fa-sync-alt"></i> 同步
             </button>
         </div>
 
-        <div class="bg-slate-800/30 rounded-3xl border border-slate-800 overflow-hidden backdrop-blur-sm">
-            <table class="w-full text-left border-collapse">
-                <thead>
-                    <tr class="text-[11px] text-slate-500 uppercase tracking-widest bg-slate-800/50">
-                        <th class="p-6">交易所商品 / 代碼</th>
-                        <th class="p-6 text-right">幣別</th>
-                        <th class="p-6 text-right">原始保證金</th>
-                        <th class="p-6 text-right text-indigo-400 bg-indigo-400/5">台幣估計 (NTD)</th>
+        <div class="bg-slate-800/20 rounded-[2rem] border border-slate-800 overflow-hidden">
+            <table class="w-full text-left">
+                <thead class="bg-slate-800/50 text-[10px] uppercase tracking-[0.2em] text-slate-500">
+                    <tr>
+                        <th class="p-6">商品/代碼</th>
+                        <th class="p-6 text-right font-bold text-blue-400 bg-blue-400/5">台幣估算</th>
                     </tr>
                 </thead>
                 <tbody id="list" class="divide-y divide-slate-800">
-                    <tr><td colspan="4" class="p-20 text-center text-slate-600">請點擊同步按鈕開始抓取最新數據...</td></tr>
+                    <tr><td colspan="2" class="p-20 text-center text-slate-600 italic">系統準備就緒，請同步資料</td></tr>
                 </tbody>
             </table>
         </div>
+        <p id="msg" class="mt-6 text-center text-[10px] text-slate-500 font-mono"></p>
     </main>
 
     <script>
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbyTSaf_Nl_JUPgUVNFTHtPowXPyET115hIWeCUq8bkpz1iWxw_xhFomkLUCCliwdpTQ_g/exec";
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbyFk_L8JLNaWi2Ln2qhX00oAS6TaYJ-54nbEE3l66l11ZhxsE90dLVQOIe4SgdKo7Gi/exec";
 
-        let cache = { margins: [], rates: {} };
-
-        async function fetchData() {
-            const btnIcon = document.getElementById('sync-icon');
-            btnIcon.classList.add('fa-spin');
-            
+        async function sync() {
+            const icon = document.getElementById('s-icon');
+            icon.classList.add('fa-spin');
             try {
                 const res = await fetch(GAS_URL);
                 const data = await res.json();
-                
-                cache = data;
                 document.getElementById('r-usd').innerText = data.rates.USD;
                 document.getElementById('r-jpy').innerText = data.rates.JPY;
-                document.getElementById('status-text').innerText = "Last Sync: " + data.lastUpdate;
+                document.getElementById('msg').innerText = "LAST UPDATE: " + data.lastUpdate;
+                
+                const q = document.getElementById('search').value.toLowerCase();
+                const container = document.getElementById('list');
+                const filtered = data.margins.filter(i => (i.name + i.id).toLowerCase().includes(q));
 
-                render();
+                container.innerHTML = filtered.map(item => {
+                    const twd = Math.round(item.margin * (data.rates[item.cur] || 1));
+                    return `
+                        <tr class="hover:bg-slate-800/40 transition-all">
+                            <td class="p-6">
+                                <div class="font-bold text-white">${item.name}</div>
+                                <div class="text-[10px] text-slate-500 font-mono">${item.id} · ${item.cur} ${item.margin.toLocaleString()}</div>
+                            </td>
+                            <td class="p-6 text-right text-2xl font-black text-blue-400 bg-blue-400/5">
+                                NT$ ${twd.toLocaleString()}
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
             } catch (e) {
-                alert("抓取失敗！請確保 GAS 部署為『所有人』並使用最新 URL。");
+                alert("連線失敗！請確認 GAS 是否設為『所有人』。");
             } finally {
-                btnIcon.classList.remove('fa-spin');
+                icon.classList.remove('fa-spin');
             }
         }
-
-        function render() {
-            const q = document.getElementById('search').value.toLowerCase();
-            const container = document.getElementById('list');
-            
-            const filtered = cache.margins.filter(i => (i.name + i.id).toLowerCase().includes(q));
-
-            container.innerHTML = filtered.map(item => {
-                const twd = Math.round(item.margin * (cache.rates[item.cur] || 1));
-                return `
-                    <tr class="hover:bg-slate-700/30 transition-all">
-                        <td class="p-6">
-                            <div class="font-bold text-white">${item.name || '未知商品'}</div>
-                            <div class="text-xs text-slate-500 font-mono tracking-tighter">${item.id}</div>
-                        </td>
-                        <td class="p-6 text-right font-mono text-slate-400">${item.cur}</td>
-                        <td class="p-6 text-right font-mono font-bold text-slate-300">${item.margin.toLocaleString()}</td>
-                        <td class="p-6 text-right text-xl font-black text-indigo-400 bg-indigo-400/5">
-                            ${twd.toLocaleString()}
-                        </td>
-                    </tr>
-                `;
-            }).join('');
-        }
-
-        document.getElementById('search').addEventListener('input', render);
     </script>
 </body>
 </html>
