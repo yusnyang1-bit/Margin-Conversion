@@ -1,1 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>國外期貨保證金換算器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-5">
+    <div class="max-w-4xl mx-auto bg-white rounded-xl shadow-md overflow-hidden p-6">
+        <h1 class="text-2xl font-bold text-gray-800 mb-4">國外期貨保證金即時換算 (MVP)</h1>
+        
+        <div id="rate-status" class="bg-blue-50 p-3 rounded-lg mb-6 text-sm text-blue-700">
+            正在獲取台銀即時匯率...
+        </div>
 
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-gray-200">
+                        <th class="p-3 border">商品名稱</th>
+                        <th class="p-3 border">結算幣別</th>
+                        <th class="p-3 border">每一大點價值</th>
+                        <th class="p-3 border">原始保證金 (原幣)</th>
+                        <th class="p-3 border bg-yellow-100 text-red-600">換算台幣 (預估)</th>
+                    </tr>
+                </thead>
+                <tbody id="margin-table-body">
+                    </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * 邏輯層 (Logic Layer)
+         * 負責處理匯率與保證金計算
+         */
+        const AppLogic = {
+            // 模擬從台銀 API 抓取的匯率 (實務上需透過 Backend Proxy)
+            rates: {
+                "USD": 32.50,
+                "JPY": 0.21,
+                "HKD": 4.15,
+                "EUR": 35.20
+            },
+
+            // 模擬從元大抓取的保證金數據 (Mock Data)
+            marginData: [
+                { name: "微型那斯達克", currency: "USD", pointValue: 2, margin: 1848 },
+                { name: "小道瓊", currency: "USD", pointValue: 5, margin: 8800 },
+                { name: "日經225", currency: "JPY", pointValue: 500, margin: 1650000 }
+            ],
+
+            formatCurrency(val) {
+                return new Intl.NumberFormat('zh-TW', { style: 'currency', currency: 'TWD' }).format(val);
+            },
+
+            calculateTWD(margin, currency) {
+                const rate = this.rates[currency] || 1;
+                return margin * rate;
+            }
+        };
+
+        /**
+         * 介面層 (UI Layer)
+         * 負責渲染畫面
+         */
+        function renderTable() {
+            const tbody = document.getElementById('margin-table-body');
+            tbody.innerHTML = AppLogic.marginData.map(item => {
+                const twdValue = AppLogic.calculateTWD(item.margin, item.currency);
+                return `
+                    <tr class="hover:bg-gray-50">
+                        <td class="p-3 border">${item.name}</td>
+                        <td class="p-3 border">${item.currency}</td>
+                        <td class="p-3 border">${item.pointValue}</td>
+                        <td class="p-3 border">${item.margin.toLocaleString()}</td>
+                        <td class="p-3 border font-bold text-red-500">${AppLogic.formatCurrency(twdValue)}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            document.getElementById('rate-status').innerText = `目前匯率參考：USD ${AppLogic.rates.USD} | JPY ${AppLogic.rates.JPY} (台銀掛牌)`;
+        }
+
+        // 初始化
+        window.onload = renderTable;
+    </script>
+</body>
+</html>
