@@ -59,25 +59,31 @@
             favs: JSON.parse(localStorage.getItem('mc_favs')) || []
         };
 
-        async function fetchData() {
-            const icon = document.getElementById('sync-icon');
-            icon.classList.add('fa-spin');
-            
-            try {
-                const response = await fetch(GAS_API_URL);
-                const data = await response.json();
-                
-                localState.margins = data.margins;
-                localState.rates = data.rates;
-                
-                renderRates();
-                renderTable();
-            } catch (e) {
-                alert("抓取失敗，請確認 GAS 部署是否設為『所有人』");
-            } finally {
-                icon.classList.remove('fa-spin');
-            }
-        }
+async function fetchData() {
+    const icon = document.getElementById('sync-icon');
+    icon.classList.add('fa-spin');
+    
+    try {
+        console.log("正在請求數據自: ", GAS_API_URL); // 新增這行
+        const response = await fetch(GAS_API_URL);
+        
+        if (!response.ok) throw new Error('網路回應不正常');
+        
+        const data = await response.json();
+        console.log("收到的數據: ", data); // 新增這行
+        
+        localState.margins = data.margins;
+        localState.rates = data.rates;
+        
+        renderRates();
+        renderTable();
+    } catch (e) {
+        console.error("抓取失敗詳細原因:", e); // 修改這行
+        alert("抓取失敗！請確保 GAS 部署設定為『所有人』，或按 F12 查看控制台錯誤訊息。");
+    } finally {
+        icon.classList.remove('fa-spin');
+    }
+}
 
         function renderRates() {
             document.getElementById('rate-display').innerHTML = `
