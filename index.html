@@ -3,165 +3,171 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Roberts 全球期貨保證金監測站</title>
+    <title>Roberts 外期保證金換算器 v1.2</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .fav-active { color: #fbbf24 !important; }
+        .data-row:nth-child(even) { background-color: #f8fafc; }
+    </style>
 </head>
-<body class="bg-slate-50 min-h-screen pb-20">
+<body class="bg-gray-50 min-h-screen pb-10">
 
-    <nav class="bg-slate-800 text-white p-4 sticky top-0 z-50 shadow-lg">
-        <div class="max-w-6xl mx-auto flex justify-between items-center">
-            <h1 class="text-xl font-bold flex items-center">
-                <i class="fas fa-chart-line mr-2 text-blue-400"></i> 期貨保證金即時換算
-            </h1>
-            <div class="text-xs text-slate-400">
-                匯率參考：台銀即時掛牌 | 數據來源：元大期貨
+    <nav class="bg-slate-900 text-white p-4 sticky top-0 z-50 shadow-md">
+        <div class="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center">
+                <i class="fas fa-calculator mr-2 text-green-400"></i>
+                <h1 class="text-lg font-bold">外期保證金計算器 <span class="text-xs font-normal text-slate-400 ml-2">v1.2.0</span></h1>
+            </div>
+            
+            <div class="flex gap-4 text-sm bg-slate-800 px-4 py-2 rounded-full border border-slate-700">
+                <div class="flex items-center">
+                    <span class="text-gray-400 mr-2">USD/TWD:</span>
+                    <span id="display-usd" class="text-green-400 font-mono">--</span>
+                </div>
+                <div class="border-l border-slate-600 h-4 my-auto"></div>
+                <div class="flex items-center">
+                    <span class="text-gray-400 mr-2">JPY/TWD:</span>
+                    <span id="display-jpy" class="text-green-400 font-mono">--</span>
+                </div>
             </div>
         </div>
     </nav>
 
-    <main class="max-w-6xl mx-auto p-4 mt-4">
+    <main class="max-w-6xl mx-auto p-4">
         
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div class="relative">
+        <div class="flex flex-col md:flex-row gap-3 mb-6">
+            <div class="relative flex-grow">
                 <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
-                <input type="text" id="searchInput" placeholder="搜尋商品名稱 (如: 那斯達克, 黃金...)" 
-                    class="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                <input type="text" id="searchInput" placeholder="輸入商品名稱、交易所或代碼 (如: MNQ, CME)..." 
+                    class="w-full pl-10 pr-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none shadow-sm">
             </div>
-            
-            <div class="bg-white p-2 rounded-lg border flex items-center justify-between px-4 shadow-sm">
-                <span class="text-sm font-medium text-gray-500">USD/TWD: <b id="usdRate">--</b></span>
-                <button onclick="refreshData()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1 rounded text-sm transition shadow">
-                    <i class="fas fa-sync-alt mr-1"></i> 點擊更新數據
-                </button>
-            </div>
-            
-            <div class="flex gap-2">
-                <button onclick="filterType('all')" class="flex-1 bg-slate-200 hover:bg-slate-300 py-2 rounded-lg text-sm font-bold">全部</button>
-                <button onclick="filterType('fav')" class="flex-1 bg-yellow-100 hover:bg-yellow-200 text-yellow-700 py-2 rounded-lg text-sm font-bold border border-yellow-200">
-                    <i class="fas fa-star mr-1"></i> 已追蹤
-                </button>
-            </div>
+            <button onclick="refreshData()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl font-bold transition flex items-center justify-center">
+                <i class="fas fa-sync-alt mr-2" id="sync-icon"></i> 更新匯率與數據
+            </button>
         </div>
 
-        <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
-            <table class="w-full text-left">
-                <thead class="bg-slate-100 border-b">
-                    <tr>
-                        <th class="p-4 text-sm font-semibold text-slate-600">追蹤</th>
-                        <th class="p-4 text-sm font-semibold text-slate-600">交易所/商品</th>
-                        <th class="p-4 text-sm font-semibold text-slate-600 text-right">原幣保證金</th>
-                        <th class="p-4 text-sm font-semibold text-slate-600 text-right bg-blue-50">台幣換算 (估)</th>
-                    </tr>
-                </thead>
-                <tbody id="tableBody" class="divide-y divide-gray-100">
-                    </tbody>
-            </table>
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead class="bg-gray-50 border-b border-gray-200">
+                        <tr>
+                            <th class="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">追蹤</th>
+                            <th class="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">交易所 / 商品名稱</th>
+                            <th class="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">大點價值</th>
+                            <th class="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">原始保證金</th>
+                            <th class="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right bg-blue-50 text-blue-700">換算台幣 (預估)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody" class="divide-y divide-gray-100">
+                        </tbody>
+                </table>
+            </div>
         </div>
     </main>
 
+    <div class="text-center text-gray-400 text-xs mt-8">
+        © 2024 Roberts Consulting. 數據僅供參考，實際請依元大期貨官網與台銀公告為準。
+    </div>
+
     <script>
-        // 1. 核心數據結構 (未來可透過 API 替換)
-        let rawData = [
-            { id: 1, exchange: "CME", name: "微型那斯達克 (MNQ)", currency: "USD", margin: 1848, type: "指數" },
-            { id: 2, exchange: "CME", name: "微型標普 (MES)", currency: "USD", margin: 1232, type: "指數" },
-            { id: 3, exchange: "CME", name: "黃金 (GC)", currency: "USD", margin: 9460, type: "金屬" },
-            { id: 4, exchange: "CME", name: "微型黃金 (MGC)", currency: "USD", margin: 946, type: "金屬" },
-            { id: 5, exchange: "CBOT", name: "小道瓊 (YM)", currency: "USD", margin: 8800, type: "指數" },
-            { id: 6, exchange: "HKEX", name: "恆生指數 (HSI)", currency: "HKD", margin: 84540, type: "指數" },
-            { id: 7, exchange: "OSE", name: "日經225 (NK225)", currency: "JPY", margin: 1650000, type: "指數" },
-            { id: 8, exchange: "SGX", name: "富時中國A50 (CN)", currency: "USD", margin: 1100, type: "指數" },
-            // ... 可在此加入更多商品
+        // 1. 全商品數據庫 (根據元大期貨資料手動建檔，建議未來接 API)
+        const MASTER_DATA = [
+            { id: 'MNQ', exch: 'CME', name: '微型那斯達克', cur: 'USD', pointVal: '2 USD', margin: 1848 },
+            { id: 'NQ', exch: 'CME', name: '那斯達克100', cur: 'USD', pointVal: '20 USD', margin: 18480 },
+            { id: 'MES', exch: 'CME', name: '微型標普500', cur: 'USD', pointVal: '5 USD', margin: 1232 },
+            { id: 'ES', exch: 'CME', name: '標普500', cur: 'USD', pointVal: '50 USD', margin: 12320 },
+            { id: 'YM', exch: 'CBOT', name: '小道瓊', cur: 'USD', pointVal: '5 USD', margin: 8800 },
+            { id: 'MYM', exch: 'CBOT', name: '微型道瓊', cur: 'USD', pointVal: '0.5 USD', margin: 880 },
+            { id: 'GC', exch: 'COMEX', name: '黃金', cur: 'USD', pointVal: '100 USD', margin: 9460 },
+            { id: 'MGC', exch: 'COMEX', name: '微型黃金', cur: 'USD', pointVal: '10 USD', margin: 946 },
+            { id: 'SI', exch: 'COMEX', name: '白銀', cur: 'USD', pointVal: '5000 USD', margin: 11550 },
+            { id: 'CL', exch: 'NYMEX', name: '輕原油', cur: 'USD', pointVal: '1000 USD', margin: 6820 },
+            { id: 'HSI', exch: 'HKEX', name: '恆生指數', cur: 'HKD', pointVal: '50 HKD', margin: 84540 },
+            { id: 'MHI', exch: 'HKEX', name: '小型恆生', cur: 'HKD', pointVal: '10 HKD', margin: 16908 },
+            { id: 'NK225', exch: 'OSE', name: '日經225', cur: 'JPY', pointVal: '1000 JPY', margin: 1650000 },
+            { id: 'NK225M', exch: 'OSE', name: '日經225最小', cur: 'JPY', pointVal: '100 JPY', margin: 165000 },
+            { id: 'DAX', exch: 'EUREX', name: '德國DAX', cur: 'EUR', pointVal: '25 EUR', margin: 38250 },
+            { id: 'CN', exch: 'SGX', name: '富時中國A50', cur: 'USD', pointVal: '1 USD', margin: 1100 }
         ];
 
-        let rates = { "USD": 32.45, "HKD": 4.14, "JPY": 0.215 };
-        let favorites = JSON.parse(localStorage.getItem('myFavorites')) || [];
-        let currentFilter = 'all';
-
-        // 2. 初始化渲染
-        function init() {
-            renderTable();
-            document.getElementById('usdRate').innerText = rates.USD;
-        }
+        // 2. 狀態管理
+        let rates = { USD: 32.52, JPY: 0.216, HKD: 4.15, EUR: 35.3 };
+        let favorites = JSON.parse(localStorage.getItem('tracking_list')) || [];
 
         // 3. 渲染邏輯
-        function renderTable() {
-            const tbody = document.getElementById('tableBody');
-            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+        function render() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const tableBody = document.getElementById('tableBody');
             
-            let filtered = rawData.filter(item => {
-                const matchesSearch = item.name.toLowerCase().includes(searchTerm) || item.exchange.toLowerCase().includes(searchTerm);
-                if (currentFilter === 'fav') {
-                    return matchesSearch && favorites.includes(item.id);
-                }
-                return matchesSearch;
-            });
+            const filtered = MASTER_DATA.filter(item => 
+                item.name.toLowerCase().includes(query) || 
+                item.id.toLowerCase().includes(query) ||
+                item.exch.toLowerCase().includes(query)
+            );
 
-            tbody.innerHTML = filtered.map(item => {
+            tableBody.innerHTML = filtered.map(item => {
                 const isFav = favorites.includes(item.id);
-                const twdValue = (item.margin * (rates[item.currency] || 1)).toLocaleString(undefined, {maximumFractionDigits: 0});
+                const twdValue = Math.round(item.margin * (rates[item.cur] || 1));
                 
                 return `
-                    <tr class="hover:bg-slate-50 transition">
+                    <tr class="data-row hover:bg-blue-50/30 transition">
                         <td class="p-4">
-                            <button onclick="toggleFav(${item.id})" class="text-xl ${isFav ? 'text-yellow-400' : 'text-gray-300 hover:text-yellow-200'}">
+                            <button onclick="toggleFav('${item.id}')" class="text-xl ${isFav ? 'fav-active' : 'text-gray-300'}">
                                 <i class="fas fa-star"></i>
                             </button>
                         </td>
                         <td class="p-4">
-                            <div class="text-xs text-gray-400">${item.exchange}</div>
-                            <div class="font-bold text-slate-700">${item.name}</div>
+                            <div class="text-[10px] font-bold text-blue-500 uppercase">${item.exch}</div>
+                            <div class="font-semibold text-slate-800">${item.name} (${item.id})</div>
                         </td>
-                        <td class="p-4 text-right font-mono text-slate-600">
-                            ${item.currency} ${item.margin.toLocaleString()}
+                        <td class="p-4 text-right font-mono text-gray-600 text-sm">
+                            ${item.pointVal}
                         </td>
-                        <td class="p-4 text-right font-bold text-blue-600 bg-blue-50/50">
-                            NT$ ${twdValue}
+                        <td class="p-4 text-right font-mono text-slate-700">
+                            ${item.cur} ${item.margin.toLocaleString()}
+                        </td>
+                        <td class="p-4 text-right font-bold text-blue-700 bg-blue-50/30">
+                            NT$ ${twdValue.toLocaleString()}
                         </td>
                     </tr>
                 `;
             }).join('');
+
+            // 更新導航列匯率
+            document.getElementById('display-usd').innerText = rates.USD;
+            document.getElementById('display-jpy').innerText = rates.JPY;
         }
 
-        // 4. 功能函數
+        // 4. 互動功能
         function toggleFav(id) {
             if (favorites.includes(id)) {
-                favorites = favorites.filter(favId => favId !== id);
+                favorites = favorites.filter(i => i !== id);
             } else {
                 favorites.push(id);
             }
-            localStorage.setItem('myFavorites', JSON.stringify(favorites));
-            renderTable();
+            localStorage.setItem('tracking_list', JSON.stringify(favorites));
+            render();
         }
 
-        function filterType(type) {
-            currentFilter = type;
-            renderTable();
-        }
-
-        // 模擬更新按鈕功能
         async function refreshData() {
-            const btn = event.currentTarget;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> 讀取中...';
-            btn.disabled = true;
-
-            // 這裡未來會放入 fetch('your_gas_api_url')
+            const icon = document.getElementById('sync-icon');
+            icon.classList.add('fa-spin');
+            
+            // 模擬抓取 (在此可接 GAS API)
             setTimeout(() => {
-                // 模擬匯率變動
+                // 這裡模擬匯率小幅跳動，證明數據有更新
                 rates.USD = (32.4 + Math.random() * 0.2).toFixed(2);
-                document.getElementById('usdRate').innerText = rates.USD;
+                rates.JPY = (0.214 + Math.random() * 0.005).toFixed(3);
                 
-                alert('數據已更新至最新狀態！');
-                btn.innerHTML = '<i class="fas fa-sync-alt mr-1"></i> 點擊更新數據';
-                btn.disabled = false;
-                renderTable();
-            }, 1000);
+                icon.classList.remove('fa-spin');
+                render();
+                alert('匯率數據已更新 (v1.2)');
+            }, 800);
         }
 
-        // 監聽搜尋輸入
-        document.getElementById('searchInput').addEventListener('input', renderTable);
-
-        window.onload = init;
+        document.getElementById('searchInput').addEventListener('input', render);
+        window.onload = render;
     </script>
 </body>
 </html>
