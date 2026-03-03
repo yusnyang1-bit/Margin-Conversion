@@ -3,58 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Margin Conversion v1.5.4</title>
+    <title>Margin Conversion v1.5.5</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <style>
-        .fav-active { color: #fbbf24 !important; }
-        .font-mono { font-family: 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', monospace; }
-        .loading-shimmer { background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; }
-        @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
-    </style>
 </head>
-<body class="bg-gray-50 min-h-screen pb-10">
+<body class="bg-gray-50 min-h-screen">
 
     <nav class="bg-slate-900 text-white p-4 sticky top-0 z-50 shadow-xl">
-        <div class="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
-            <div class="flex items-center">
-                <i class="fas fa-bolt mr-3 text-yellow-400 text-2xl"></i>
-                <div>
-                    <h1 class="text-xl font-black tracking-widest uppercase">Margin Conversion</h1>
-                    <p class="text-[10px] text-slate-400">Live Auto-Sync Mode · v1.5.4</p>
-                </div>
-            </div>
-            
-            <div id="rate-bar" class="flex gap-4 bg-slate-800 px-5 py-2 rounded-2xl border border-slate-700 font-mono text-xs">
-                USD/TWD: <span id="usd-val" class="text-green-400">--</span> | 
-                JPY/TWD: <span id="jpy-val" class="text-green-400">--</span> | 
-                HKD/TWD: <span id="hkd-val" class="text-green-400">--</span>
+        <div class="max-w-6xl mx-auto flex justify-between items-center">
+            <h1 class="text-xl font-black italic tracking-widest text-indigo-400">MARGIN CONVERSION</h1>
+            <div id="rate-bar" class="text-xs font-mono bg-slate-800 px-4 py-2 rounded-xl border border-slate-700">
+                匯率讀取中...
             </div>
         </div>
     </nav>
 
-    <main class="max-w-6xl mx-auto p-4 md:p-6">
-        <div class="flex flex-col md:flex-row gap-4 mb-6">
-            <div class="relative flex-grow">
-                <i class="fas fa-search absolute left-4 top-3.5 text-slate-400"></i>
-                <input type="text" id="searchInput" placeholder="輸入商品代碼或名稱 (如: NQ, MNQ, 黃金)..." 
-                    class="w-full pl-12 pr-4 py-3 rounded-2xl border-0 shadow-sm ring-1 ring-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none">
-            </div>
-            <button onclick="fetchData()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-2xl font-bold transition flex items-center justify-center shadow-lg">
-                <i class="fas fa-sync-alt mr-2" id="sync-icon"></i> 同步最新保證金
+    <main class="max-w-6xl mx-auto p-4">
+        <div class="flex flex-col md:flex-row gap-4 mb-6 mt-4">
+            <input type="text" id="searchInput" placeholder="搜尋商品代碼或名稱..." 
+                class="flex-grow pl-6 pr-4 py-3 rounded-2xl border-0 shadow-sm ring-1 ring-slate-200 outline-none focus:ring-2 focus:ring-indigo-500">
+            <button onclick="fetchData()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-2xl font-bold transition flex items-center justify-center">
+                <i class="fas fa-sync-alt mr-2" id="sync-icon"></i> 手動更新
             </button>
         </div>
 
         <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
             <div class="overflow-x-auto">
                 <table class="w-full text-left">
-                    <thead class="bg-slate-50 border-b border-slate-200">
+                    <thead class="bg-slate-50 border-b border-slate-200 text-slate-400 text-[11px] uppercase">
                         <tr>
-                            <th class="p-5 text-[11px] font-bold text-slate-400 uppercase">追蹤</th>
-                            <th class="p-5 text-[11px] font-bold text-slate-400 uppercase">交易所 / 商品名稱</th>
-                            <th class="p-5 text-[11px] font-bold text-slate-400 uppercase text-right">大點價值</th>
-                            <th class="p-5 text-[11px] font-bold text-slate-400 uppercase text-right">原始保證金</th>
-                            <th class="p-5 text-[11px] font-bold text-indigo-600 uppercase text-right bg-indigo-50/50">台幣換算 (估)</th>
+                            <th class="p-5">商品名稱 (代碼)</th>
+                            <th class="p-5 text-right">一大點價值</th>
+                            <th class="p-5 text-right">原始保證金</th>
+                            <th class="p-5 text-right bg-indigo-50 text-indigo-600">台幣換算 (約)</th>
                         </tr>
                     </thead>
                     <tbody id="tableBody" class="divide-y divide-slate-100">
@@ -62,99 +43,84 @@
                 </table>
             </div>
         </div>
-        
-        <div id="status-msg" class="mt-4 text-center text-xs text-slate-400"></div>
+        <p id="lastUpdate" class="text-center text-[10px] text-slate-400 mt-6"></p>
     </main>
 
     <script>
-        // 1. 填入你剛才測試成功的 GAS URL
         const GAS_API_URL = "https://script.google.com/macros/s/AKfycbynqAOp3jlZDqLMCBLeso5kK-Zb1xul45SQzc-KTPj6Ol92oJlxM1_ZvjbRFii3CyfnEA/exec";
 
         let localState = {
             margins: [],
-            rates: { "USD": 32.55, "JPY": 0.21, "HKD": 4.15 },
-            favs: JSON.parse(localStorage.getItem('mc_favs')) || []
+            rates: { "USD": 32.5, "JPY": 0.21, "HKD": 4.15 }
         };
 
-        // 2. 數據同步邏輯
         async function fetchData() {
             const icon = document.getElementById('sync-icon');
-            const status = document.getElementById('status-msg');
             icon.classList.add('fa-spin');
-            status.innerText = "正在連線至元大期貨與台灣銀行...";
-
+            
             try {
                 const response = await fetch(GAS_API_URL);
                 const data = await response.json();
-                
-                if (data.error) throw new Error(data.error);
+                console.log("後端回傳原始資料:", data); // 除錯用
 
-                localState.margins = data.margins;
-                localState.rates = data.rates;
-                
-                updateRateUI();
+                // 修正對接邏輯：容許不同的欄位名稱格式
+                localState.margins = data.margins || [];
+                localState.rates = data.rates || localState.rates;
+
+                renderRateBar();
                 renderTable();
-                status.innerText = "數據同步成功 | 最後更新: " + (data.lastUpdate || new Date().toLocaleTimeString());
+                document.getElementById('lastUpdate').innerText = "最後更新時間: " + (data.lastUpdate || "剛才");
             } catch (e) {
-                console.error(e);
-                status.innerText = "同步失敗，請檢查網路連線或稍後再試。";
-                // 保底邏輯：如果 API 失敗，使用先前緩存或顯示空列表
+                console.error("渲染出錯:", e);
+                alert("資料讀取成功但顯示失敗，請按 F12 查看 Console。");
             } finally {
                 icon.classList.remove('fa-spin');
             }
         }
 
-        function updateRateUI() {
-            document.getElementById('usd-val').innerText = localState.rates.USD || '--';
-            document.getElementById('jpy-val').innerText = localState.rates.JPY || '--';
-            document.getElementById('hkd-val').innerText = localState.rates.HKD || '--';
+        function renderRateBar() {
+            document.getElementById('rate-bar').innerHTML = `
+                USD: <span class="text-green-400">${localState.rates.USD || '--'}</span> | 
+                JPY: <span class="text-green-400">${localState.rates.JPY || '--'}</span> | 
+                HKD: <span class="text-green-400">${localState.rates.HKD || '--'}</span>
+            `;
         }
 
-        // 3. 渲染表格
         function renderTable() {
             const query = document.getElementById('searchInput').value.toLowerCase();
             const tbody = document.getElementById('tableBody');
             
-            const filtered = localState.margins.filter(item => 
-                item.name.toLowerCase().includes(query) || item.id.toLowerCase().includes(query)
-            );
+            const filtered = localState.margins.filter(item => {
+                const searchStr = (item.name + item.id).toLowerCase();
+                return searchStr.includes(query);
+            });
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="p-10 text-center text-slate-400">目前沒有資料，請點擊同步按鈕</td></tr>';
+                return;
+            }
 
             tbody.innerHTML = filtered.map(item => {
-                const isFav = localState.favs.includes(item.id);
+                // 自動判斷幣別匯率，若無匹配則預設 1
                 const rate = localState.rates[item.cur] || 1;
                 const twdValue = Math.round(item.margin * rate);
 
                 return `
                     <tr class="hover:bg-slate-50 transition">
                         <td class="p-5">
-                            <i class="fas fa-star ${isFav ? 'text-yellow-400' : 'text-slate-100'} cursor-pointer hover:text-yellow-200" onclick="toggleFav('${item.id}')"></i>
-                        </td>
-                        <td class="p-5">
                             <div class="font-bold text-slate-800">${item.name}</div>
-                            <div class="text-[10px] text-slate-400 font-mono tracking-tighter uppercase">${item.id}</div>
+                            <div class="text-[10px] text-slate-400 font-mono uppercase">${item.id}</div>
                         </td>
-                        <td class="p-5 text-right font-mono text-slate-500 text-sm">
-                            ${item.pointVal}
-                        </td>
+                        <td class="p-5 text-right font-mono text-slate-500 text-sm">${item.pointVal}</td>
                         <td class="p-5 text-right font-mono font-bold text-slate-700">
                             <span class="text-[9px] text-slate-400 mr-1">${item.cur}</span>${item.margin.toLocaleString()}
                         </td>
-                        <td class="p-5 text-right font-black text-indigo-700 bg-indigo-50/20 text-lg">
+                        <td class="p-5 text-right font-black text-indigo-700 bg-indigo-50/30 text-lg">
                             NT$ ${twdValue.toLocaleString()}
                         </td>
                     </tr>
                 `;
             }).join('');
-        }
-
-        function toggleFav(id) {
-            if (localState.favs.includes(id)) {
-                localState.favs = localState.favs.filter(i => i !== id);
-            } else {
-                localState.favs.push(id);
-            }
-            localStorage.setItem('mc_favs', JSON.stringify(localState.favs));
-            renderTable();
         }
 
         document.getElementById('searchInput').addEventListener('input', renderTable);
