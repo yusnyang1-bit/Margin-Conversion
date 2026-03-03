@@ -2,8 +2,8 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Margin Terminal v2.6.5</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Margin Terminal v2.6.6</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -22,7 +22,7 @@
         .mono { font-family: 'JetBrains Mono', monospace; }
         
         /* 凍結首列與滾動優化 */
-        .table-container { overflow-x: auto; height: calc(100vh - 120px); overflow-y: auto; -webkit-overflow-scrolling: touch; }
+        .table-container { overflow-x: auto; height: calc(100vh - 125px); overflow-y: auto; -webkit-overflow-scrolling: touch; }
         thead th { 
             position: sticky; top: -1px; z-index: 30; 
             background: var(--accent); color: #ffffff; 
@@ -52,8 +52,11 @@
             <div class="flex items-center gap-3">
                 <i class="fas fa-chart-line text-blue-500 text-2xl"></i>
                 <div>
-                    <h1 class="font-black italic text-lg tracking-tighter leading-none">MARGIN <span class="text-blue-500">PRO</span></h1>
-                    <div class="text-[9px] mono opacity-50 uppercase mt-1">v2.6.5 Stable | U:<span id="r-u">--</span> J:<span id="r-j">--</span></div>
+                    <h1 class="font-black italic text-lg tracking-tighter leading-none">MARGIN <span class="text-blue-500 font-black">PRO</span></h1>
+                    <div class="text-[9px] mono opacity-50 uppercase mt-1">
+                        v2.6.6 | U:<span id="r-u">--</span> J:<span id="r-j">--</span>
+                        <span class="ml-2 text-blue-400">SYNC: <span id="last-time">--:--:--</span></span>
+                    </div>
                 </div>
             </div>
             
@@ -71,7 +74,7 @@
     <main class="px-1 mt-1">
         <div class="mb-2 px-1">
             <input type="text" id="search" placeholder="搜尋商品..." 
-                class="w-full border border-slate-700/50 px-4 py-3 text-base focus:border-blue-500 outline-none no-round" 
+                class="w-full border border-slate-700/50 px-4 py-3 text-base focus:border-blue-500 outline-none no-round shadow-inner" 
                 style="background: var(--card); color: var(--text);">
         </div>
 
@@ -88,7 +91,8 @@
                         </tr>
                     </thead>
                     <tbody id="list">
-                        </tbody>
+                        <tr><td colspan="5" class="p-20 text-center opacity-50">INITIALIZING...</td></tr>
+                    </tbody>
                 </table>
             </div>
         </div>
@@ -126,6 +130,11 @@
                 state.rates = data.rates;
                 document.getElementById('r-u').innerText = data.rates.USD || "--";
                 document.getElementById('r-j').innerText = data.rates.JPY || "--";
+                
+                // 顯示更新時間 (從資料中取得或使用當前時間)
+                const now = new Date();
+                document.getElementById('last-time').innerText = now.toLocaleTimeString('zh-TW', { hour12: false });
+                
                 render();
             } catch (e) { console.error(e); }
             finally { icon.classList.remove('fa-spin'); }
@@ -155,8 +164,6 @@
                 const isFav = state.favorites.includes(item.id);
                 const rate = state.rates[item.cur] || 1;
                 const twd = Math.round(item.margin * rate);
-                
-                // 正則表達式去除括號及其內容 (如 (CC), (NQ) 等)
                 const cleanName = item.name.replace(/\s*\(.*?\)\s*/g, '');
 
                 return `
